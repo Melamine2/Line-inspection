@@ -24,6 +24,65 @@ th,td{border:1px solid #d5dbe3;padding:9px;vertical-align:top}th{background:#173
 .company-logo{width:240px;max-width:42vw;height:auto;background:#fff;border-radius:6px;padding:5px}
 .company-title h1{margin:0 0 5px}
 @media(max-width:600px){.company-header{gap:10px}.company-logo{width:150px}.company-title h1{font-size:18px}.company-title div{font-size:11px}}
+
+.auto-result{display:inline-block;padding:6px 10px;border-radius:12px;font-weight:bold;min-width:78px;text-align:center}
+.auto-result.pending{background:#eef2f7;color:#64748b}
+.auto-result.pass{background:#dcfce7;color:#166534}
+.auto-result.ng{background:#fee2e2;color:#991b1b}
+.auto-result.check{background:#fef3c7;color:#92400e}
+
+#inspectionPdfViewer{position:fixed;inset:0;z-index:99999;background:#e5e7eb;overflow:auto;padding-top:64px}
+.pdf-toolbar{position:fixed;top:0;left:0;right:0;height:64px;background:#17365d;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:10px 18px;z-index:100000}
+.pdf-toolbar .secondary{margin-left:8px;background:#fff;color:#17365d;border:0;border-radius:6px;padding:10px 15px;cursor:pointer}
+.pdf-page{background:#fff;max-width:1100px;margin:18px auto;padding:25px;box-shadow:0 2px 10px #0002}
+.pdf-header{display:flex;align-items:center;gap:18px;border-bottom:2px solid #17365d;padding-bottom:10px;margin-bottom:12px}
+.pdf-header img{max-width:190px;max-height:60px}
+.pdf-header h1{margin:0 0 5px;font-size:20px}
+.pdf-meta{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px}
+.pdf-meta>div{border:1px solid #ccc;padding:7px;font-size:12px}
+.pdf-table{width:100%;border-collapse:collapse;font-size:11px}
+.pdf-table th,.pdf-table td{border:1px solid #777;padding:7px}
+.pdf-table th{background:#17365d;color:#fff}
+.pdf-footer{margin-top:12px;font-size:10px}
+@media(max-width:650px){
+ .pdf-toolbar{height:58px;padding:8px;font-size:13px}
+ .pdf-toolbar .primary,.pdf-toolbar .secondary{padding:8px 9px}
+ #inspectionPdfViewer{padding-top:58px}
+ .pdf-page{margin:8px;padding:12px;min-width:700px}
+ .pdf-meta{grid-template-columns:repeat(4,1fr)}
+}
+@media print{
+ body>*:not(#inspectionPdfViewer){display:none!important}
+ #inspectionPdfViewer{position:static!important;display:block!important;background:#fff!important;overflow:visible!important;padding:0!important}
+ .pdf-toolbar{display:none!important}
+ .pdf-page{box-shadow:none!important;margin:0!important;max-width:none!important;padding:0!important}
+}
+
+/* Remove up/down spinner arrows from numeric Actual inputs */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button{
+  -webkit-appearance:none;
+  margin:0;
+}
+input[type="number"]{
+  -moz-appearance:textfield;
+  appearance:textfield;
+}
+</style>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+.visual-select{width:100%;padding:7px;border:1px solid #cbd5e1;border-radius:6px;background:#fff}
+.pdf-report{display:none}
+@media print{
+  body.print-report > *{display:none!important}
+  body.print-report .pdf-report{display:block!important}
+  .pdf-report{font-family:Arial,sans-serif;padding:20px;color:#111}
+  .pdf-report table{width:100%;border-collapse:collapse;font-size:11px}
+  .pdf-report th,.pdf-report td{border:1px solid #999;padding:6px;text-align:left}
+  .pdf-report th{background:#17365d;color:#fff}
+}
 </style>
 </head>
 <body>
@@ -61,7 +120,7 @@ th,td{border:1px solid #d5dbe3;padding:9px;vertical-align:top}th{background:#173
 <tbody id="fmlBody"></tbody>
 </table>
 </div>
-<br><button class="primary" onclick="saveInspection()">Save Inspection</button>
+<br><button class="primary" onclick="saveInspection()">Save Inspection &amp; Download PDF</button>
 </div>
 </section>
 
@@ -79,11 +138,12 @@ th,td{border:1px solid #d5dbe3;padding:9px;vertical-align:top}th{background:#173
 
 <section id="records" class="page">
 <div class="panel"><h2>Inspection Records</h2>
-<div class="tablewrap"><table><thead><tr><th>Date</th><th>Part</th><th>Operation</th><th>Inspector</th><th>Overall</th></tr></thead>
+<div class="tablewrap"><table><thead><tr><th>Inspection ID</th><th>Date</th><th>Part</th><th>Operation</th><th>Inspector</th><th>Overall</th><th>PDF</th></tr></thead>
 <tbody id="recordsBody"></tbody></table></div>
 </div>
 </section>
 
+<div id="pdfReport" class="pdf-report"></div>
 <script>
 const FML_DATA=[{"sheet": "Op-40", "part": "CPFV3S - 11A160 - AB", "part_name": "Output Shaft(FV3S)", "op_no": "40", "items": [{"sno": "1", "characteristic": "Length", "specification": "102.70/102.80", "checking_method": "Height Gauge"}, {"sno": "2", "characteristic": "Centering Runout in 14 dia", "specification": "0.20 max", "checking_method": "V-block with dial"}, {"sno": "3", "characteristic": "Centering Runout in 12 dia", "specification": "0.20 max", "checking_method": "V-block with dial"}, {"sno": "4", "characteristic": "Centering Runout in 19 dia", "specification": "0.20 max", "checking_method": "V-block with dial"}, {"sno": "5", "characteristic": "Thickness", "specification": "8.00/8.20", "checking_method": "Micrometer"}, {"sno": "6", "characteristic": "Appearance", "specification": "Free from unclear & damages", "checking_method": "Visual"}]}, {"sheet": "Op-50", "part": "CPFV3S - 11A160 - AB", "part_name": "Output Shaft(FV3S)", "op_no": "50", "items": [{"sno": "1", "characteristic": "Flange OD", "specification": "41.90/42.10", "checking_method": "Digital Vernier"}, {"sno": "2", "characteristic": "Groove Length", "specification": "2.05±0.075", "checking_method": "Profile projector"}, {"sno": "3", "characteristic": "Groove dia", "specification": "18.23/18.43", "checking_method": "Profile projector/Gauge"}, {"sno": "4", "characteristic": "Distance", "specification": "80.08/80.15", "checking_method": "profile projecter/Height gauge"}, {"sno": "5", "characteristic": "Flange Face runout", "specification": "0.05 max", "checking_method": "V-block with dial"}, {"sno": "6", "characteristic": "Position Length", "specification": "9.22/9.28", "checking_method": "Profile projector/Snap gauge"}, {"sno": "7", "characteristic": "Spline  Length", "specification": "19.55/19.65", "checking_method": "Profile projector"}, {"sno": "8", "characteristic": "Groove width", "specification": "1.45/1.48", "checking_method": "Profile Projector/Thickness gauge"}, {"sno": "9", "characteristic": "Collar Thickness", "specification": "1.50/1.55", "checking_method": "Profile projector"}, {"sno": "10", "characteristic": "Groove OD", "specification": "10.55/10.65", "checking_method": "Profile Projector/Snap gauge"}, {"sno": "11", "characteristic": "Diameter", "specification": "19.10/19.15", "checking_method": "Micrometer/Snap gauge"}, {"sno": "12", "characteristic": "Diameter", "specification": "12.15/12.20", "checking_method": "Micrometer/Snap gauge"}, {"sno": "13", "characteristic": "Groove OD runout", "specification": "0.05 max", "checking_method": "V-block with dial"}, {"sno": "14", "characteristic": "Groove diameter", "specification": "13.60/13.80", "checking_method": "Profile projector/Snap gauge"}, {"sno": "15", "characteristic": "Outer diameter", "specification": "14.21/14.23", "checking_method": "Micrometer"}, {"sno": "16", "characteristic": "Groove OD", "specification": "15.85/15.92", "checking_method": "Profile projector/Snap gauge"}, {"sno": "17", "characteristic": "Groove width", "specification": "2.83/2.88", "checking_method": "Snap gauge /Profile projector"}, {"sno": "18", "characteristic": "Run out", "specification": "0.05 max", "checking_method": "V-block with dial"}, {"sno": "19", "characteristic": "Bore dia", "specification": "11.70/11.80", "checking_method": "plug  Gauge"}, {"sno": "20", "characteristic": "Depth with 5mm Gauge ball", "specification": "4.81/5.01", "checking_method": "Height Gauge with Dial"}, {"sno": "21", "characteristic": "Depth", "specification": "4.80/4.92", "checking_method": "Height Gauge with Dial"}, {"sno": "22", "characteristic": "Step bore", "specification": "18.35/18.65", "checking_method": "Vernier Caliper/Plug Gauge"}, {"sno": "23", "characteristic": "Flange thickness", "specification": "7.07/7.14", "checking_method": "Micrometer/Gauge"}, {"sno": "24", "characteristic": "Distance", "specification": "15.00/15.20", "checking_method": "Profile projector"}, {"sno": "25", "characteristic": "Appearance", "specification": "Free from burr, dent mark,jaw mark, material unwash & damages etc.,", "checking_method": "Visual"}]}, {"sheet": "Op-50 (Drill Bore)", "part": "CPFV3S - 11A160 - AB", "part_name": "Output Shaft(FV3S)", "op_no": "50", "items": [{"sno": "1", "characteristic": "Bore dia", "specification": "11.70/11.80", "checking_method": "plug  Gauge"}, {"sno": "2", "characteristic": "Depth with 5mm Gauge ball", "specification": "4.81/5.01", "checking_method": "Height Gauge with Dial"}, {"sno": "3", "characteristic": "Depth", "specification": "4.80/4.92", "checking_method": "Height Gauge with Dial"}, {"sno": "4", "characteristic": "Step bore", "specification": "18.35/18.65", "checking_method": "Vernier Caliper"}, {"sno": "5", "characteristic": "Appearance", "specification": "Free from burr, dent mark,jaw mark, material unwash & damages etc.,", "checking_method": "Visual"}]}, {"sheet": "Op-60", "part": "CPFV3S - 11A160 - AB", "part_name": "Output Shaft(FV3S)", "op_no": "60", "items": [{"sno": "1", "characteristic": "Root Diameter", "specification": "12.30/12.60", "checking_method": "Point Micrometer."}, {"sno": "2", "characteristic": "Pin over dimension Pin Size  (Ø2.28)", "specification": "17.880/17.910", "checking_method": "Micrometer/ POD Gauge"}, {"sno": "3", "characteristic": "No of teeth", "specification": "12", "checking_method": "Manual Counting"}, {"sno": "4", "characteristic": "Major diameter", "specification": "15.80/15.88", "checking_method": "Micrometer"}, {"sno": "5", "characteristic": "Appearance", "specification": "Free from unclear & damages", "checking_method": "Visual"}]}, {"sheet": "Op-90", "part": "CPFV3S - 11A160 - AB", "part_name": "Output Shaft(FV3S)", "op_no": "90", "items": [{"sno": "1", "characteristic": "Diameter", "specification": "11.91/11.93 x 2", "checking_method": "Air ring gauge/ Micrometer"}, {"sno": "2", "characteristic": "11.92 dia Surface finish", "specification": "Ra 0.40 max", "checking_method": "Roughness tester"}, {"sno": "3", "characteristic": "Diameter", "specification": "18.935/18.945", "checking_method": "Air ring gauge/ Micrometer"}, {"sno": "4", "characteristic": "Spline Length", "specification": "19.55/19.65", "checking_method": "Profile projector"}, {"sno": "5", "characteristic": "18.94 dia Surface finish", "specification": "Ra  0.8 max", "checking_method": "Roughness tester"}, {"sno": "6", "characteristic": "Appearance", "specification": "Free from burr, dent mark,jaw mark, material unwash & damages etc.,", "checking_method": "Visual"}]}, {"sheet": "Op-100", "part": "CPFV3S - 11A160 - AB", "part_name": "Output Shaft(FV3S)", "op_no": "100", "items": [{"sno": "1", "characteristic": "3 holes dia", "specification": "3 x 5.960/5.974", "checking_method": "Air gauge"}, {"sno": "2", "characteristic": "Inner Diameter", "specification": "11.948/11.968", "checking_method": "Air gauge"}, {"sno": "3", "characteristic": "Runout.", "specification": "0.05 Max", "checking_method": "V-block with dial"}, {"sno": "4", "characteristic": "Appearance", "specification": "Free from burr, dent mark,jaw mark, material unwash & damages etc.,", "checking_method": "Visual"}]}, {"sheet": "Op-130", "part": "CPFV3S - 11A160 - AB", "part_name": "Output Shaft(FV3S)", "op_no": "130", "items": [{"sno": "1", "characteristic": "Depth", "specification": "0.25±0.25", "checking_method": "Flush pin gauge /Vernier height gauge"}, {"sno": "2", "characteristic": "Diameter", "specification": "7.074±0.017", "checking_method": "Air Gauge/Plug Gauge"}, {"sno": "3", "characteristic": "Run out", "specification": "0.12 A-B", "checking_method": "Dail with setup"}, {"sno": "4", "characteristic": "Appearance", "specification": "Free from burr, dent mark,jaw mark, material unwash & damages etc.,", "checking_method": "Visual"}]}, {"sheet": "oi9", "part": "CPFV3S - 11A160 - AB", "part_name": "Output Shaft(FV3S)", "op_no": "140", "items": [{"sno": "1", "characteristic": "Length", "specification": "3X15.92 ±0.12", "checking_method": "Flush pin gauge /Vernier"}, {"sno": "2", "characteristic": "Appearance", "specification": "Free from burr, dent mark,jaw mark, material unwash & damages etc.,", "checking_method": "Visual"}]}, {"sheet": "PT3C VMC", "part": "CPPT3C-11355-AA", "part_name": "Output Shaft", "op_no": "100", "items": [{"sno": "1", "characteristic": "3 holes dia", "specification": "3 x 5.960/5.974", "checking_method": "Air gauge"}, {"sno": "2", "characteristic": "Inner Diameter", "specification": "11.948/11.968", "checking_method": "Air gauge"}, {"sno": "3", "characteristic": "Runout.", "specification": "0.05 Max", "checking_method": "V-block with dial"}, {"sno": "4", "characteristic": "Appearance", "specification": "Free from burr, dent mark,jaw mark, material unwash & damages etc.,", "checking_method": "Visual"}]}];
 const part=document.getElementById('part');
@@ -126,40 +186,251 @@ function loadFML(){
  <td>${esc(i.characteristic)}</td>
  <td class="spec">${esc(i.specification)}</td>
  <td class="method">${esc(i.checking_method)}</td>
- <td><input class="actual" placeholder="Actual"></td>
- <td><select class="result"><option></option><option>PASS</option><option>NG</option><option>OK</option></select></td>
+ <td>${String(i.checking_method).toLowerCase().includes('visual')
+      ? '<select class="actual visual-select" onchange="autoVisualResult(this)"><option value="">Select</option><option value="OK">OK</option><option value="NOT OK">NOT OK</option></select>'
+      : '<input class="actual" type="number" step="any" placeholder="Actual" oninput="autoResult(this)">'
+    }</td>
+ <td><span class="auto-result pending">Enter actual</span></td>
  </tr>`).join('');
 }
-function saveInspection(){
+
+function parseSpecification(spec){
+ const s=String(spec||'').trim().replace(/[–—]/g,'-');
+ let m=s.match(/(-?\d+(?:\.\d+)?)\s*±\s*(-?\d+(?:\.\d+)?)/);
+ if(m)return {low:parseFloat(m[1])-parseFloat(m[2]),high:parseFloat(m[1])+parseFloat(m[2])};
+ m=s.match(/(-?\d+(?:\.\d+)?)\s*(?:\/|-)\s*(-?\d+(?:\.\d+)?)/);
+ if(m){const a=parseFloat(m[1]),b=parseFloat(m[2]);return {low:Math.min(a,b),high:Math.max(a,b)};}
+ m=s.match(/(-?\d+(?:\.\d+)?)\s*(?:MAX|max)\b/);
+ if(m)return {low:-Infinity,high:parseFloat(m[1])};
+ m=s.match(/(-?\d+(?:\.\d+)?)\s*(?:MIN|min)\b/);
+ if(m)return {low:parseFloat(m[1]),high:Infinity};
+
+ // GD&T/run-out style single limit, e.g. "0.12 A-B".
+ // The numeric value is the tolerance limit; A-B is datum/reference text.
+ m=s.match(/^\s*(-?\d+(?:\.\d+)?)\s+[A-Za-z](?:\s*[-/]\s*[A-Za-z])?\s*$/);
+ if(m)return {low:-Infinity,high:parseFloat(m[1])};
+
+ return null;
+}
+function autoResult(input){
+ const row=input.closest('tr');
+ const box=row.querySelector('.auto-result');
+ const actual=parseFloat(input.value);
+ const spec=row.cells[2].innerText.trim();
+ const lim=parseSpecification(spec);
+
+ if(input.value.trim()===''){
+   box.textContent='Enter actual';
+   box.className='auto-result pending';
+   return;
+ }
+ if(Number.isNaN(actual)){
+   box.textContent='INVALID';
+   box.className='auto-result ng';
+   return;
+ }
+ if(!lim){
+   box.textContent='MANUAL';
+   box.className='auto-result check';
+   return;
+ }
+ const pass=actual>=lim.low && actual<=lim.high;
+ box.textContent=pass?'PASS':'NG';
+ box.className='auto-result '+(pass?'pass':'ng');
+}
+
+function autoVisualResult(select){
+ const box=select.closest('tr').querySelector('.auto-result');
+ if(select.value==='OK'){
+   box.textContent='PASS';
+   box.className='auto-result pass';
+ }else if(select.value==='NOT OK'){
+   box.textContent='NG';
+   box.className='auto-result ng';
+ }else{
+   box.textContent='Enter actual';
+   box.className='auto-result pending';
+ }
+}
+
+
+function collectInspection(){
  const x=FML_DATA[Number(operation.value)];
- if(!x)return;
+ if(!x)return {error:'Please select an operation.'};
+
  const inspector=document.getElementById('inspector').value.trim();
- if(!inspector){alert('Please enter inspector name.');return;}
- const results=[...document.querySelectorAll('#fmlBody tr')].map(r=>({
-  characteristic:r.cells[1].innerText,
-  specification:r.cells[2].innerText,
-  checking_method:r.cells[3].innerText,
-  actual:r.querySelector('.actual').value,
-  result:r.querySelector('.result').value
- }));
- const overall=results.some(r=>r.result==='NG')?'NG':'PASS';
+ if(!inspector)return {error:'Please enter inspector name.'};
+
+ const rows=[...document.querySelectorAll('#fmlBody tr')];
+ let hasNG=false, missing=false, unparsed=false;
+
+ const results=rows.map(r=>{
+   const input=r.querySelector('.actual');
+   const actual=input.value.trim();
+   const spec=r.cells[2].innerText.trim();
+   const method=r.cells[3].innerText.trim();
+   const isVisual=method.toLowerCase().includes('visual');
+   const lim=parseSpecification(spec);
+   let result='';
+
+   if(actual===''){
+     missing=true;
+     result='NOT CHECKED';
+   }else if(isVisual){
+     result=actual==='OK'?'PASS':'NG';
+     if(result==='NG')hasNG=true;
+   }else if(!lim || Number.isNaN(parseFloat(actual))){
+     unparsed=true;
+     result='CHECK SPEC';
+   }else{
+     result=(parseFloat(actual)>=lim.low && parseFloat(actual)<=lim.high)?'PASS':'NG';
+     if(result==='NG')hasNG=true;
+   }
+
+   return {
+     sno:r.cells[0].innerText,
+     characteristic:r.cells[1].innerText,
+     specification:spec,
+     checking_method:method,
+     actual,
+     result
+   };
+ });
+
+ if(missing)return {error:'Please complete every inspection point before saving.'};
+ if(unparsed)return {error:'One or more numeric specifications cannot be evaluated automatically. Please review the FML specification.'};
+
+ const overall=hasNG?'NG':'PASS';
+ const inspectionId='FML-'+new Date().toISOString().replace(/\D/g,'').slice(0,14);
+
+ return {
+   id:inspectionId,
+   date:document.getElementById('date').value,
+   time:new Date().toLocaleTimeString(),
+   part:x.part,
+   part_name:x.part_name,
+   operation:x.op_no,
+   sheet:x.sheet,
+   inspector,
+   shift:document.getElementById('shift').value,
+   overall,
+   results
+ };
+}
+
+function saveInspection(){
+ const data=collectInspection();
+ if(data.error){alert(data.error);return;}
+
  const all=JSON.parse(localStorage.getItem('fmlRecords')||'[]');
- all.unshift({date:document.getElementById('date').value,part:x.part,operation:x.op_no,inspector,overall,results});
+ all.unshift(data);
  localStorage.setItem('fmlRecords',JSON.stringify(all));
  renderRecords();
- alert('Inspection saved: '+overall);
+
+ // Create the PDF immediately after saving.
+ generatePDF(data);
+}
+
+function generatePDF(data){
+  const old=document.getElementById('inspectionPdfViewer');
+  if(old) old.remove();
+
+  const logo=document.querySelector('.company-logo');
+  const logoSrc=logo ? logo.src : '';
+
+  const rows=data.results.map(r=>{
+    const cls=r.result==='PASS'?'pass':(r.result==='NG'?'ng':'');
+    return `<tr>
+      <td>${esc(r.sno)}</td>
+      <td>${esc(r.characteristic)}</td>
+      <td>${esc(r.specification)}</td>
+      <td>${esc(r.checking_method)}</td>
+      <td>${esc(r.actual)}</td>
+      <td class="${cls}">${esc(r.result)}</td>
+    </tr>`;
+  }).join('');
+
+  const viewer=document.createElement('div');
+  viewer.id='inspectionPdfViewer';
+  viewer.innerHTML=`
+    <div class="pdf-toolbar">
+      <b>FML Inspection Report</b>
+      <div>
+        <button type="button" class="primary" onclick="printInspectionReport()">🖨️ Save / Print PDF</button>
+        <button type="button" class="secondary" onclick="closeInspectionReport()">✕ Close</button>
+      </div>
+    </div>
+    <div class="pdf-page">
+      <div class="pdf-header">
+        ${logoSrc?`<img src="${logoSrc}" alt="Srimukha">`:''}
+        <div><h1>FML Inspection Report</h1><div>Inspection ID: <b>${esc(data.id)}</b></div></div>
+      </div>
+      <div class="pdf-meta">
+        <div><b>Part No.</b><br>${esc(data.part)}</div>
+        <div><b>Part Name</b><br>${esc(data.part_name||'')}</div>
+        <div><b>Operation</b><br>${esc(data.operation)}</div>
+        <div><b>Inspector</b><br>${esc(data.inspector)}</div>
+        <div><b>Shift</b><br>${esc(data.shift||'')}</div>
+        <div><b>Date</b><br>${esc(data.date)}</div>
+        <div><b>Time</b><br>${esc(data.time)}</div>
+        <div><b>Overall</b><br><span class="${data.overall==='PASS'?'pass':'ng'}">${esc(data.overall)}</span></div>
+      </div>
+      <table class="pdf-table">
+        <thead><tr><th>S.No.</th><th>Characteristic</th><th>Specification</th><th>Checking Method</th><th>Actual</th><th>Result</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <div class="pdf-footer">Generated by Srimukha FML Line Inspection Control</div>
+    </div>`;
+
+  document.body.appendChild(viewer);
+  document.body.classList.add('show-pdf-viewer');
+}
+
+function printInspectionReport(){
+  window.print();
+}
+
+function closeInspectionReport(){
+  const v=document.getElementById('inspectionPdfViewer');
+  if(v)v.remove();
+  document.body.classList.remove('show-pdf-viewer');
+}
+
+function showPrintReport(data){
+ const body=document.body;
+ const report=document.getElementById('pdfReport');
+ report.innerHTML=`
+ <h2>FML Inspection Report</h2>
+ <p><b>Inspection ID:</b> ${esc(data.id)} &nbsp; <b>Overall:</b> ${esc(data.overall)}</p>
+ <p><b>Part No:</b> ${esc(data.part)} &nbsp; <b>Part Name:</b> ${esc(data.part_name)} &nbsp; <b>Operation:</b> ${esc(data.operation)}</p>
+ <p><b>Inspector:</b> ${esc(data.inspector)} &nbsp; <b>Shift:</b> ${esc(data.shift)} &nbsp; <b>Date:</b> ${esc(data.date)} &nbsp; <b>Time:</b> ${esc(data.time)}</p>
+ <table><thead><tr><th>S.No.</th><th>Characteristic</th><th>Specification</th><th>Checking Method</th><th>Actual</th><th>Result</th></tr></thead>
+ <tbody>${data.results.map(r=>`<tr><td>${esc(r.sno)}</td><td>${esc(r.characteristic)}</td><td>${esc(r.specification)}</td><td>${esc(r.checking_method)}</td><td>${esc(r.actual)}</td><td>${esc(r.result)}</td></tr>`).join('')}</tbody></table>`;
+ body.classList.add('print-report');
+ window.print();
+ setTimeout(()=>body.classList.remove('print-report'),1000);
 }
 function renderMaster(){
  document.getElementById('masterBody').innerHTML=FML_DATA.flatMap(x=>x.items.map(i=>`
  <tr><td>${esc(x.op_no)} — ${esc(x.sheet)}</td><td>${esc(x.part)}</td><td>${esc(x.part_name)}</td>
  <td>${esc(i.characteristic)}</td><td class="spec">${esc(i.specification)}</td><td class="method">${esc(i.checking_method)}</td></tr>`)).join('');
 }
+
+function downloadRecordPDF(id){
+ const all=JSON.parse(localStorage.getItem('fmlRecords')||'[]');
+ const data=all.find(r=>r.id===id);
+ if(!data){alert('Inspection record not found.');return;}
+ generatePDF(data);
+}
+
 function renderRecords(){
  const all=JSON.parse(localStorage.getItem('fmlRecords')||'[]');
  document.getElementById('recordsBody').innerHTML=all.map(r=>`
- <tr><td>${esc(r.date)}</td><td>${esc(r.part)}</td><td>${esc(r.operation)}</td><td>${esc(r.inspector)}</td>
- <td class="${r.overall==='NG'?'ng':'pass'}">${esc(r.overall)}</td></tr>`).join('') || '<tr><td colspan="5">No records yet.</td></tr>';
+ <tr><td>${esc(r.id)}</td><td>${esc(r.date)}</td><td>${esc(r.part)}</td><td>${esc(r.operation)}</td><td>${esc(r.inspector)}</td>
+ <td class="${r.overall==='NG'?'ng':'pass'}">${esc(r.overall)}</td>
+ <td><button class="primary" onclick="downloadRecordPDF('${esc(r.id)}')">📄 PDF / Print</button></td></tr>`).join('') || '<tr><td colspan="7">No records yet.</td></tr>';
 }
+if(!document.getElementById('date').value) document.getElementById('date').value=new Date().toISOString().slice(0,10);
 init();
 </script>
 </body></html>
