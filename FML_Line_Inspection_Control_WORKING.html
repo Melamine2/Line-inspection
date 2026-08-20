@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FML Line Inspection Control</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f3f6f9;color:#172033}
+header{background:#17365d;color:white;padding:18px 24px}header h1{margin:0 0 5px;font-size:24px}
+nav{background:white;padding:10px 20px;border-bottom:1px solid #ddd}nav button{padding:10px 15px;border:0;border-radius:6px;margin-right:6px;cursor:pointer}nav .active{background:#17365d;color:#fff}
+.page{display:none;max-width:1450px;margin:20px auto;padding:0 15px}.page.active{display:block}
+.panel{background:#fff;padding:20px;border-radius:10px;box-shadow:0 2px 8px #0001;margin-bottom:18px}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}label{font-weight:bold;font-size:13px}select,input{width:100%;padding:10px;margin-top:5px;border:1px solid #cbd5e1;border-radius:6px}
+.info{background:#eef5fb;border-radius:7px;padding:12px;margin:12px 0}
+.tablewrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:850px;font-size:13px}
+th,td{border:1px solid #d5dbe3;padding:9px;vertical-align:top}th{background:#17365d;color:#fff;position:sticky;top:0}
+.spec{background:#fffbea;font-weight:bold;color:#111827}.method{background:#f4f9ff}
+.actual{width:110px;padding:7px}.result{padding:7px}
+.primary{background:#17365d;color:#fff;border:0;padding:10px 16px;border-radius:6px;cursor:pointer}
+.pass{background:#dcfce7;color:#166534;font-weight:bold}.ng{background:#fee2e2;color:#991b1b;font-weight:bold}
+@media(max-width:850px){.grid{grid-template-columns:1fr 1fr}}@media(max-width:550px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header><h1>FML Line Inspection Control</h1><div>All operations • Characteristic • Specification • Checking Method</div></header>
+<nav><button class="active" onclick="show('control',this)">Line Control</button><button onclick="show('master',this)">FML Master</button><button onclick="show('records',this)">Records</button></nav>
+
+<section id="control" class="page active">
+<div class="panel">
+<h2>Current Running Part</h2>
+<div class="grid">
+<div><label>Part No.</label><select id="part" onchange="filterOperations()"></select></div>
+<div><label>Operation / FML</label><select id="operation" onchange="loadFML()"></select></div>
+<div><label>Inspector</label><input id="inspector" placeholder="Inspector name"></div>
+<div><label>Shift</label><select id="shift"><option>A</option><option>B</option><option>C</option></select></div>
+<div><label>Date</label><input id="date" type="date"></div>
+</div>
+</div>
+
+<div class="panel">
+<h2>FML Inspection Check Sheet</h2>
+<div id="info" class="info"></div>
+<div class="tablewrap">
+<table>
+<thead><tr>
+<th>S.No.</th><th>Characteristic</th><th>Specification</th><th>Checking Method</th><th>Actual</th><th>Result</th>
+</tr></thead>
+<tbody id="fmlBody"></tbody>
+</table>
+</div>
+<br><button class="primary" onclick="saveInspection()">Save Inspection</button>
+</div>
+</section>
+
+<section id="master" class="page">
+<div class="panel">
+<h2>Complete FML Master — All Operations</h2>
+<div class="tablewrap">
+<table>
+<thead><tr><th>Operation / FML</th><th>Part No.</th><th>Part Name</th><th>Characteristic</th><th>Specification</th><th>Checking Method</th></tr></thead>
+<tbody id="masterBody"></tbody>
+</table>
+</div>
+</div>
+</section>
+
+<section id="records" class="page">
+<div class="panel"><h2>Inspection Records</h2>
+<div class="tablewrap"><table><thead><tr><th>Date</th><th>Part</th><th>Operation</th><th>Inspector</th><th>Overall</th></tr></thead>
+<tbody id="recordsBody"></tbody></table></div>
+</div>
+</section>
+
+<script>
+const FML_DATA=[{"sheet": "Op-40", "part": "CPFV3S - 11A160 - AB", "part_name": "Output Shaft(FV3S)", "op_no": "40", "items": [{"sno": "1", "characteristic": "Length", "specification": "102.70/102.80", "checking_method": "Height Gauge"}, {"sno": "2", "characteristic": "Centering Runout in 14 dia", "specification": "0.20 max", "checking_method": "V-block with dial"}, {"sno": "3", "characteristic": "Centering Runout in 12 dia", "specification": "0.20 max", "checking_method": "V-block with dial"}, {"sno": "4", "characteristic": "Centering Runout in 19 dia", "specification": "0.20 max", "checking_method": "V-block with dial"}, {"sno": "5", "characteristic": "Thickness", "specification": "8.00/8.20", "checking_method": "Micrometer"}, {"sno": "6", "characteristic": "Appearance", "specification": "Free from unclear & damages", "checking_method": "Visual"}]}, {"sheet": "Op-50", "part": "CPFV3S - 11A160 - AB", "part_name": "Output Shaft(FV3S)", "op_no": "50", "items": [{"sno": "1", "characteristic": "Flange OD", "specification": "41.90/42.10", "checking_method": "Digital Vernier"}, {"sno": "2", "characteristic": "Groove Length", "specification": "2.05±0.075", "checking_method": "Profile projector"}, {"sno": "3", "characteristic": "Groove dia", "specification": "18.23/18.43", "checking_method": "Profile projector/Gauge"}, {"sno": "4", "characteristic": "Distance", "specification": "80.08/80.15", "checking_method": "profile projecter/Height gauge"}, {"sno": "5", "characteristic": "Flange Face runout", "specification": "0.05 max", "checking_method": "V-block with dial"}, {"sno": "6", "characteristic": "Position Length", "specification": "9.22/9.28", "checking_method": "Profile projector/Snap gauge"}, {"sno": "7", "characteristic": "Spline  Length", "specification": "19.55/19.65", "checking_method": "Profile projector"}, {"sno": "8", "characteristic": "Groove width", "specification": "1.45/1.48", "checking_method": "Profile Projector/Thickness gauge"}, {"sno": "9", "characteristic": "Collar Thickness", "specification": "1.50/1.55", "checking_method": "Profile projector"}, {"sno": "10", "characteristic": "Groove OD", "specification": "10.55/10.65", "checking_method": "Profile Projector/Snap gauge"}, {"sno": "11", "characteristic": "Diameter", "specification": "19.10/19.15", "checking_method": "Micrometer/Snap gauge"}, {"sno": "12", "characteristic": "Diameter", "specification": "12.15/12.20", "checking_method": "Micrometer/Snap gauge"}, {"sno": "13", "characteristic": "Groove OD runout", "specification": "0.05 max", "checking_method": "V-block with dial"}, {"sno": "14", "characteristic": "Groove diameter", "specification": "13.60/13.80", "checking_method": "Profile projector/Snap gauge"}, {"sno": "15", "characteristic": "Outer diameter", "specification": "14.21/14.23", "checking_method": "Micrometer"}, {"sno": "16", "characteristic": "Groove OD", "specification": "15.85/15.92", "checking_method": "Profile projector/Snap gauge"}, {"sno": "17", "characteristic": "Groove width", "specification": "2.83/2.88", "checking_method": "Snap gauge /Profile projector"}, {"sno": "18", "characteristic": "Run out", "specification": "0.05 max", "checking_method": "V-block with dial"}, {"sno": "19", "characteristic": "Bore dia", "specification": "11.70/11.80", "checking_method": "plug  Gauge"}, {"sno": "20", "characteristic": "Depth with 5mm Gauge ball", "specification": "4.81/5.01", "checking_method": "Height Gauge with Dial"}, {"sno": "21", "characteristic": "Depth", "specification": "4.80/4.92", "checking_method": "Height Gauge with Dial"}, {"sno": "22", "characteristic": "Step bore", "specification": "18.35/18.65", "checking_method": "Vernier Caliper/Plug Gauge"}, {"sno": "23", "characteristic": "Flange thickness", "specification": "7.07/7.14", "checking_method": "Micrometer/Gauge"}, {"sno": "24", "characteristic": "Distance", "specification": "15.00/15.20", "checking_method": "Profile projector"}, {"sno": "25", "characteristic": "Appearance", "specification": "Free from burr, dent mark,jaw mark, material unwash & damages etc.,", "checking_method": "Visual"}]}, {"sheet": "Op-50 (Drill Bore)", "part": "CPFV3S - 11A160 - AB", "part_name": "Output Shaft(FV3S)", "op_no": "50", "items": [{"sno": "1", "characteristic": "Bore dia", "specification": "11.70/11.80", "checking_method": "plug  Gauge"}, {"sno": "2", "characteristic": "Depth with 5mm Gauge ball", "specification": "4.81/5.01", "checking_method": "Height Gauge with Dial"}, {"sno": "3", "characteristic": "Depth", "specification": "4.80/4.92", "checking_method": "Height Gauge with Dial"}, {"sno": "4", "characteristic": "Step bore", "specification": "18.35/18.65", "checking_method": "Vernier Caliper"}, {"sno": "5", "characteristic": "Appearance", "specification": "Free from burr, dent mark,jaw mark, material unwash & damages etc.,", "checking_method": "Visual"}]}, {"sheet": "Op-60", "part": "CPFV3S - 11A160 - AB", "part_name": "Output Shaft(FV3S)", "op_no": "60", "items": [{"sno": "1", "characteristic": "Root Diameter", "specification": "12.30/12.60", "checking_method": "Point Micrometer."}, {"sno": "2", "characteristic": "Pin over dimension Pin Size  (Ø2.28)", "specification": "17.880/17.910", "checking_method": "Micrometer/ POD Gauge"}, {"sno": "3", "characteristic": "No of teeth", "specification": "12", "checking_method": "Manual Counting"}, {"sno": "4", "characteristic": "Major diameter", "specification": "15.80/15.88", "checking_method": "Micrometer"}, {"sno": "5", "characteristic": "Appearance", "specification": "Free from unclear & damages", "checking_method": "Visual"}]}, {"sheet": "Op-90", "part": "CPFV3S - 11A160 - AB", "part_name": "Output Shaft(FV3S)", "op_no": "90", "items": [{"sno": "1", "characteristic": "Diameter", "specification": "11.91/11.93 x 2", "checking_method": "Air ring gauge/ Micrometer"}, {"sno": "2", "characteristic": "11.92 dia Surface finish", "specification": "Ra 0.40 max", "checking_method": "Roughness tester"}, {"sno": "3", "characteristic": "Diameter", "specification": "18.935/18.945", "checking_method": "Air ring gauge/ Micrometer"}, {"sno": "4", "characteristic": "Spline Length", "specification": "19.55/19.65", "checking_method": "Profile projector"}, {"sno": "5", "characteristic": "18.94 dia Surface finish", "specification": "Ra  0.8 max", "checking_method": "Roughness tester"}, {"sno": "6", "characteristic": "Appearance", "specification": "Free from burr, dent mark,jaw mark, material unwash & damages etc.,", "checking_method": "Visual"}]}, {"sheet": "Op-100", "part": "CPFV3S - 11A160 - AB", "part_name": "Output Shaft(FV3S)", "op_no": "100", "items": [{"sno": "1", "characteristic": "3 holes dia", "specification": "3 x 5.960/5.974", "checking_method": "Air gauge"}, {"sno": "2", "characteristic": "Inner Diameter", "specification": "11.948/11.968", "checking_method": "Air gauge"}, {"sno": "3", "characteristic": "Runout.", "specification": "0.05 Max", "checking_method": "V-block with dial"}, {"sno": "4", "characteristic": "Appearance", "specification": "Free from burr, dent mark,jaw mark, material unwash & damages etc.,", "checking_method": "Visual"}]}, {"sheet": "Op-130", "part": "CPFV3S - 11A160 - AB", "part_name": "Output Shaft(FV3S)", "op_no": "130", "items": [{"sno": "1", "characteristic": "Depth", "specification": "0.25±0.25", "checking_method": "Flush pin gauge /Vernier height gauge"}, {"sno": "2", "characteristic": "Diameter", "specification": "7.074±0.017", "checking_method": "Air Gauge/Plug Gauge"}, {"sno": "3", "characteristic": "Run out", "specification": "0.12 A-B", "checking_method": "Dail with setup"}, {"sno": "4", "characteristic": "Appearance", "specification": "Free from burr, dent mark,jaw mark, material unwash & damages etc.,", "checking_method": "Visual"}]}, {"sheet": "oi9", "part": "CPFV3S - 11A160 - AB", "part_name": "Output Shaft(FV3S)", "op_no": "140", "items": [{"sno": "1", "characteristic": "Length", "specification": "3X15.92 ±0.12", "checking_method": "Flush pin gauge /Vernier"}, {"sno": "2", "characteristic": "Appearance", "specification": "Free from burr, dent mark,jaw mark, material unwash & damages etc.,", "checking_method": "Visual"}]}, {"sheet": "PT3C VMC", "part": "CPPT3C-11355-AA", "part_name": "Output Shaft", "op_no": "100", "items": [{"sno": "1", "characteristic": "3 holes dia", "specification": "3 x 5.960/5.974", "checking_method": "Air gauge"}, {"sno": "2", "characteristic": "Inner Diameter", "specification": "11.948/11.968", "checking_method": "Air gauge"}, {"sno": "3", "characteristic": "Runout.", "specification": "0.05 Max", "checking_method": "V-block with dial"}, {"sno": "4", "characteristic": "Appearance", "specification": "Free from burr, dent mark,jaw mark, material unwash & damages etc.,", "checking_method": "Visual"}]}];
+const part=document.getElementById('part');
+const operation=document.getElementById('operation');
+document.getElementById('date').value=new Date().toISOString().slice(0,10);
+
+function esc(v){
+ return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+}
+function show(id,btn){
+ document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+ document.getElementById(id).classList.add('active');
+ document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+ btn.classList.add('active');
+}
+function init(){
+ const parts=[...new Set(FML_DATA.map(x=>x.part).filter(Boolean))];
+ part.innerHTML=parts.map(p=>`<option value="${esc(p)}">${esc(p)}</option>`).join('');
+ filterOperations();
+ renderMaster();
+ renderRecords();
+}
+function filterOperations(){
+ const selected=part.value;
+ const list=FML_DATA.filter(x=>x.part===selected);
+ operation.innerHTML=list.map(x=>`<option value="${FML_DATA.indexOf(x)}">${esc(x.op_no)} — ${esc(x.sheet)}</option>`).join('');
+ if(!list.length){
+   operation.innerHTML=FML_DATA.map(x=>`<option value="${FML_DATA.indexOf(x)}">${esc(x.op_no)} — ${esc(x.sheet)}</option>`).join('');
+ }
+ loadFML();
+}
+function loadFML(){
+ const x=FML_DATA[Number(operation.value)];
+ if(!x)return;
+ document.getElementById('info').innerHTML=
+ `<b>FML:</b> ${esc(x.sheet)} &nbsp; | &nbsp; <b>Part No:</b> ${esc(x.part)} &nbsp; | &nbsp; <b>Part Name:</b> ${esc(x.part_name)} &nbsp; | &nbsp; <b>Operation:</b> ${esc(x.op_no)} &nbsp; | &nbsp; <b>Inspection Points:</b> ${x.items.length}`;
+ document.getElementById('fmlBody').innerHTML=x.items.map(i=>`
+ <tr>
+ <td>${esc(i.sno)}</td>
+ <td>${esc(i.characteristic)}</td>
+ <td class="spec">${esc(i.specification)}</td>
+ <td class="method">${esc(i.checking_method)}</td>
+ <td><input class="actual" placeholder="Actual"></td>
+ <td><select class="result"><option></option><option>PASS</option><option>NG</option><option>OK</option></select></td>
+ </tr>`).join('');
+}
+function saveInspection(){
+ const x=FML_DATA[Number(operation.value)];
+ if(!x)return;
+ const inspector=document.getElementById('inspector').value.trim();
+ if(!inspector){alert('Please enter inspector name.');return;}
+ const results=[...document.querySelectorAll('#fmlBody tr')].map(r=>({
+  characteristic:r.cells[1].innerText,
+  specification:r.cells[2].innerText,
+  checking_method:r.cells[3].innerText,
+  actual:r.querySelector('.actual').value,
+  result:r.querySelector('.result').value
+ }));
+ const overall=results.some(r=>r.result==='NG')?'NG':'PASS';
+ const all=JSON.parse(localStorage.getItem('fmlRecords')||'[]');
+ all.unshift({date:document.getElementById('date').value,part:x.part,operation:x.op_no,inspector,overall,results});
+ localStorage.setItem('fmlRecords',JSON.stringify(all));
+ renderRecords();
+ alert('Inspection saved: '+overall);
+}
+function renderMaster(){
+ document.getElementById('masterBody').innerHTML=FML_DATA.flatMap(x=>x.items.map(i=>`
+ <tr><td>${esc(x.op_no)} — ${esc(x.sheet)}</td><td>${esc(x.part)}</td><td>${esc(x.part_name)}</td>
+ <td>${esc(i.characteristic)}</td><td class="spec">${esc(i.specification)}</td><td class="method">${esc(i.checking_method)}</td></tr>`)).join('');
+}
+function renderRecords(){
+ const all=JSON.parse(localStorage.getItem('fmlRecords')||'[]');
+ document.getElementById('recordsBody').innerHTML=all.map(r=>`
+ <tr><td>${esc(r.date)}</td><td>${esc(r.part)}</td><td>${esc(r.operation)}</td><td>${esc(r.inspector)}</td>
+ <td class="${r.overall==='NG'?'ng':'pass'}">${esc(r.overall)}</td></tr>`).join('') || '<tr><td colspan="5">No records yet.</td></tr>';
+}
+init();
+</script>
+</body></html>
